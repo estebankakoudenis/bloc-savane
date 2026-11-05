@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bloc Savane – jeu de blocs gratuit</title>
+<meta name="description" content="Bloc Savane : un jeu de blocs gratuit. Placez les pièces, complétez les lignes et battez votre record.">
+<meta name="theme-color" content="#e4572e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!-- AdSense : après approbation, collez ici le script fourni par Google (balise <script async src="https://pagead2.googlesyndication.com/...">) -->
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4ead5;--panel:#d9c7a3;--empty:#eadfc3;--ink:#3b2a14;--accent:#e4572e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1a16;--panel:#2f2820;--empty:#3d342a;--ink:#f6e8cc}}
+:root[data-theme="dark"]{--bg:#1d1a16;--panel:#2f2820;--empty:#3d342a;--ink:#f6e8cc}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Baloo 2",system-ui,sans-serif}
+body{display:flex;flex-direction:column;align-items:center;padding:10px 12px 0;min-height:100%}
+h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.5px}
+.hud{display:flex;gap:10px;margin:4px 0 10px;width:100%;max-width:420px}
+.hud div{flex:1;background:var(--panel);border-radius:14px;text-align:center;padding:3px 8px;line-height:1.15;font-weight:700}
+.hud small{display:block;font-size:12px;font-weight:500;opacity:.75}.hud b{font-size:22px}
+#grid{width:min(100%,420px);aspect-ratio:1;display:grid;grid-template-columns:repeat(8,1fr);gap:2px;padding:6px;background:var(--panel);border-radius:16px}
+.k,.m{border-radius:5px;background:var(--empty)}
+.k.f,.m.f{box-shadow:inset 0 -3px 0 rgba(0,0,0,.25),inset 0 3px 0 rgba(255,255,255,.3)}
+.k.pop{animation:pop .2s forwards}
+@keyframes pop{to{transform:scale(0);opacity:0}}
+#tray{width:min(100%,420px);display:flex;justify-content:space-around;align-items:center;height:130px;margin-top:12px;touch-action:none}
+.slot{width:31%;height:100%;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}
+.mini{display:grid;gap:2px}.mini .m{width:20px;height:20px}.mini .m.e{visibility:hidden}
+#fly{position:fixed;pointer-events:none;z-index:9;display:none;gap:2px}
+#fly .m{opacity:.95}
+.ad{width:100%;max-width:420px;min-height:56px;margin:12px 0 8px;border:2px dashed var(--panel);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;opacity:.8;text-align:center;padding:4px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.ov.on{display:flex}
+.box{background:var(--bg);border-radius:22px;padding:22px;max-width:340px;width:100%;text-align:center}
+.box h2{margin:0 0 4px;font-size:26px}.box p{margin:0 0 14px}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:10px 16px;margin:4px;background:var(--accent);color:#fff;cursor:pointer;font-size:17px}
+button.alt{background:var(--panel);color:var(--ink)}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.k.pop{animation:none}}
+.foot{font-size:13px;margin:4px 0 14px;opacity:.85}.foot a{color:inherit}
+.mus{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;width:42px;height:42px;padding:0;margin:0;border-radius:50%;background:var(--panel);color:var(--ink);font-size:20px;z-index:10}
+</style>
+</head>
+<body>
+<h1>Bloc Savane</h1>
+<button id="mus" class="mus" aria-label="Activer ou couper la musique">🔊</button>
+<div class="hud"><div><small>Record</small><b id="bs">0</b></div><div><small>Score</small><b id="sc">0</b></div></div>
+<div id="grid" aria-label="Plateau de jeu"></div>
+<div id="tray"></div>
+<div id="fly"></div>
+
+<!-- Emplacement bannière Google : à remplacer par votre code AdSense (web) ou AdMob (application) -->
+<div class="ad">Espace publicitaire (bannière Google)</div>
+
+<p class="foot"><a href="confidentialite.html">Confidentialité</a> · <a href="contact.html">Contact</a></p>
+
+<div class="ov" id="ov"><div class="box"><h2 id="ot"></h2><p id="op"></p><div id="ob"></div></div></div>
+
+<script>
+const N=8,COL=['#e4572e','#f3a712','#29a36a','#2e86de','#8e44ad','#17bebb','#e84393'];
+const SH=[
+[[0,0]],[[0,0],[0,1]],[[0,0],[1,0]],[[0,0],[0,1],[0,2]],[[0,0],[1,0],[2,0]],
+[[0,0],[0,1],[0,2],[0,3]],[[0,0],[1,0],[2,0],[3,0]],[[0,0],[0,1],[1,0],[1,1]],
+[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]],
+[[0,0],[1,0],[1,1]],[[0,0],[0,1],[1,0]],[[0,1],[1,0],[1,1]],[[0,0],[0,1],[1,1]],
+[[0,0],[1,0],[2,0],[2,1],[2,2]],[[0,0],[0,1],[0,2],[1,0],[2,0]],
+[[0,0],[0,1],[0,2],[1,1]],[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]]
+];
+let g,pcs,score=0,best=0,games=0,drag=null,busy=false;
+try{best=+localStorage.getItem('bs_best')||0}catch(e){}
+const $=id=>document.getElementById(id),grid=$('grid'),tray=$('tray'),fly=$('fly');
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+for(let i=0;i<N*N;i++){const d=document.createElement('div');d.className='k';grid.appendChild(d)}
+
+/* ---- Hooks publicitaires (à brancher sur Google) ---- */
+function showRewardedAd(done){ /* TODO: AdMob/AdSense pub avec récompense ; appeler done() à la fin */ done(); }
+function showInterstitial(){ /* TODO: pub plein écran toutes les 3 parties */ }
+
+const dims=s=>[Math.max(...s.map(x=>x[0]))+1,Math.max(...s.map(x=>x[1]))+1];
+function deal(){pcs=[0,1,2].map(()=>{const i=Math.floor(Math.random()*SH.length);return{s:SH[i],c:i%COL.length}})}
+function fits(p,r,c){return p.s.every(([a,b])=>{const y=r+a,x=c+b;return y>=0&&y<N&&x>=0&&x<N&&g[y][x]<0})}
+function anyFit(p){for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(fits(p,r,c))return true;return false}
+
+function draw(ghost){
+  [...grid.children].forEach((k,i)=>{
+    const v=g[Math.floor(i/N)][i%N];
+    k.className='k'+(v>=0?' f':'');k.style.background=v>=0?COL[v]:'';k.style.opacity='';
+  });
+  if(ghost)ghost.cells.forEach(([y,x])=>{const k=grid.children[y*N+x];k.style.background=ghost.col;k.style.opacity='.45'});
+}
+function miniEl(p,size){
+  const [R,C]=dims(p.s),m=document.createElement('div');
+  m.className='mini';m.style.gridTemplateColumns='repeat('+C+','+size+'px)';
+  for(let a=0;a<R;a++)for(let b=0;b<C;b++){
+    const d=document.createElement('div'),on=p.s.some(q=>q[0]===a&&q[1]===b);
+    d.className='m'+(on?' f':' e');d.style.width=d.style.height=size+'px';if(on)d.style.background=COL[p.c];m.appendChild(d);
+  }
+  return m;
+}
+function drawTray(){
+  tray.innerHTML='';
+  pcs.forEach((p,i)=>{
+    const s=document.createElement('div');s.className='slot';s.dataset.i=i;
+    if(p){const sz=Math.min(20,Math.floor(86/Math.max(...dims(p.s))));s.appendChild(miniEl(p,sz))}
+    tray.appendChild(s);
+  });
+}
+function hud(){$('sc').textContent=score;$('bs').textContent=best}
+function step(){return (grid.clientWidth-12)/N}
+
+tray.addEventListener('pointerdown',e=>{
+  if(busy)return;
+  const s=e.target.closest('.slot');if(!s)return;
+  const i=+s.dataset.i,p=pcs[i];if(!p)return;
+  const st=step(),sz=st-2,[R,C]=dims(p.s);
+  fly.innerHTML='';fly.appendChild(miniEl(p,sz));fly.style.display='block';
+  drag={i,p,w:C*st,h:R*st,ok:false};move(e);
+});
+addEventListener('pointermove',e=>{if(drag)move(e)});
+function move(e){
+  const st=step(),gr=grid.getBoundingClientRect();
+  const fx=e.clientX-drag.w/2,fy=e.clientY-drag.h-60;
+  fly.style.left=fx+'px';fly.style.top=fy+'px';
+  const r=Math.round((fy-gr.top-6)/st),c=Math.round((fx-gr.left-6)/st);
+  drag.ok=fits(drag.p,r,c);drag.r=r;drag.c=c;
+  draw(drag.ok?{cells:drag.p.s.map(([a,b])=>[r+a,c+b]),col:COL[drag.p.c]}:null);
+}
+addEventListener('pointerup',()=>{
+  if(!drag)return;
+  const d=drag;drag=null;fly.style.display='none';
+  if(d.ok)put(d);else draw();
+});
+addEventListener('pointercancel',()=>{drag=null;fly.style.display='none';draw()});
+
+async function put(d){
+  busy=true;
+  d.p.s.forEach(([a,b])=>{g[d.r+a][d.c+b]=d.p.c});
+  score+=d.p.s.length;pcs[d.i]=null;draw();blip(520,0.1);
+  const full=new Set();let lines=0;
+  for(let r=0;r<N;r++)if(g[r].every(v=>v>=0)){lines++;for(let c=0;c<N;c++)full.add(r*N+c)}
+  for(let c=0;c<N;c++)if(g.every(row=>row[c]>=0)){lines++;for(let r=0;r<N;r++)full.add(r*N+c)}
+  if(lines){
+    full.forEach(i=>grid.children[i].classList.add('pop'));
+    await wait(210);
+    full.forEach(i=>{g[Math.floor(i/N)][i%N]=-1});
+    score+=10*lines*lines;[784,988,1175].slice(0,Math.min(3,lines+1)).forEach((f,k)=>setTimeout(()=>blip(f,0.18),k*90));
+  }
+  if(pcs.every(p=>!p))deal();
+  draw();drawTray();hud();
+  if(score>best){best=score;try{localStorage.setItem('bs_best',best)}catch(e){}hud()}
+  if(pcs.every(p=>!p||!anyFit(p)))over();
+  busy=false;
+}
+function overlay(t,p,btns){
+  $('ot').textContent=t;$('op').textContent=p;const o=$('ob');o.innerHTML='';
+  btns.forEach(([l,fn,alt])=>{const x=document.createElement('button');x.textContent=l;if(alt)x.className='alt';x.onclick=()=>{$('ov').classList.remove('on');fn()};o.appendChild(x)});
+  $('ov').classList.add('on');
+}
+function over(){
+  overlay('Plus de place !','Score : '+score+' · Record : '+best,[
+    ['Regarder une pub : continuer',()=>showRewardedAd(()=>{
+      for(let r=2;r<6;r++)for(let c=0;c<N;c++)g[r][c]=-1;deal();draw();drawTray()})],
+    ['Rejouer',()=>start(),true]
+  ]);
+}
+function start(){
+  g=Array.from({length:N},()=>Array(N).fill(-1));score=0;
+  if(++games%3===0)showInterstitial();
+  deal();draw();drawTray();hud();
+}
+/* ---- Musique et sons : générés par le code, aucun fichier ni droit d’auteur ---- */
+let ac=null,master=null,musicOn=true,mTimer=null,mStep=0;
+try{musicOn=localStorage.getItem('bs_music')!=='0'}catch(e){}
+const mf=n=>440*Math.pow(2,(n-69)/12);
+const MEL=[72,0,76,0,79,0,76,74, 69,0,72,0,76,0,72,69, 72,0,69,0,72,76,74,72, 74,0,71,0,67,0,71,74];
+const BAS=[48,45,41,43];
+function tone(f,t,d,type,vol){
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+d+0.05);
+}
+function tick(){
+  if(!ac||!musicOn)return;
+  const t=ac.currentTime+0.05,i=mStep%32,bar=Math.floor(i/8);
+  if(MEL[i])tone(mf(MEL[i]),t,0.4,'triangle',0.5);
+  if(i%4===0)tone(mf(BAS[bar]),t,0.9,'sine',0.7);
+  if(i%8===4)tone(mf(BAS[bar]+12),t,0.35,'triangle',0.25);
+  mStep++;
+}
+function blip(f,d){if(ac&&musicOn)tone(f,ac.currentTime+0.01,d||0.12,'square',0.15)}
+function setMus(){$('mus').textContent=musicOn?'🔊':'🔇'}
+function startMusic(){
+  if(!musicOn)return;
+  if(!ac){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;ac=new A();master=ac.createGain();master.gain.value=0.16;master.connect(ac.destination)}
+  if(ac.state==='suspended')ac.resume();
+  if(!mTimer)mTimer=setInterval(tick,260);
+}
+function stopMusic(){clearInterval(mTimer);mTimer=null;if(ac)ac.suspend()}
+$('mus').addEventListener('click',e=>{
+  e.stopPropagation();musicOn=!musicOn;
+  try{localStorage.setItem('bs_music',musicOn?'1':'0')}catch(err){}
+  setMus();musicOn?startMusic():stopMusic();
+});
+addEventListener('pointerdown',startMusic);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(ac)ac.suspend()}else if(musicOn&&ac)ac.resume()});
+setMus();
+
+start();
+if("serviceWorker" in navigator){addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
+</script>
+</body>
+</html>
