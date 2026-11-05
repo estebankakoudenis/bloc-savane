@@ -207,7 +207,13 @@ $('mus').addEventListener('click',e=>{
   try{localStorage.setItem('bs_music',musicOn?'1':'0')}catch(err){}
   setMus();musicOn?startMusic():stopMusic();
 });
-addEventListener('pointerdown',startMusic);
+function unlock(){
+  if(!musicOn||(ac&&ac.state==='running'&&mTimer))return;
+  try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+  startMusic();
+  if(ac){try{const sb=ac.createBuffer(1,1,22050),ss=ac.createBufferSource();ss.buffer=sb;ss.connect(ac.destination);ss.start(0)}catch(e){}}
+}
+['touchend','pointerup','click','keydown'].forEach(ev=>addEventListener(ev,unlock,{passive:true}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(ac)ac.suspend()}else if(musicOn&&ac)ac.resume()});
 setMus();
 
