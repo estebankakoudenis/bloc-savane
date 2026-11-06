@@ -47,12 +47,26 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.k.pop{animation:none}}
 .foot{font-size:13px;margin:4px 0 14px;opacity:.85}.foot a{color:inherit}
 .mus{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;width:42px;height:42px;padding:0;margin:0;border-radius:50%;background:var(--panel);color:var(--ink);font-size:20px;z-index:10}
+h1{background:linear-gradient(90deg,var(--accent),#f3a712);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+.brand{display:flex;align-items:center;gap:10px}
+body::before{content:"";position:fixed;inset:0;z-index:-1;opacity:.07;pointer-events:none;background:repeating-linear-gradient(45deg,var(--ink) 0 2px,transparent 2px 22px),repeating-linear-gradient(-45deg,var(--ink) 0 2px,transparent 2px 22px)}
+.k.f,.m.f{position:relative}
+.k.f::after,.m.f::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(255,255,255,.4),transparent 55%)}
+.tools{display:flex;gap:6px;width:100%;max-width:420px;margin:0 0 10px}
+.tools button{flex:1;margin:0;padding:8px 2px;font-size:14px;background:var(--panel);color:var(--ink)}
+#toast{position:fixed;left:50%;top:38%;transform:translate(-50%,0) scale(.6);font-size:38px;font-weight:800;color:var(--accent);text-shadow:0 3px 0 rgba(0,0,0,.35);opacity:0;pointer-events:none;z-index:15;transition:all .3s;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,-30px) scale(1)}
+:root[data-t="ocean"]{--bg:#062a3f;--panel:#0b4766;--empty:#11587b;--ink:#e8f7ff;--accent:#19c2c9}
+:root[data-t="foret"]{--bg:#0e2a1c;--panel:#17402a;--empty:#1f5136;--ink:#eaf7d9;--accent:#f0b429}
+:root[data-t="nuit"]{--bg:#15102a;--panel:#231a45;--empty:#2e2358;--ink:#f1ecff;--accent:#ff5c8a}
 </style>
 </head>
 <body>
-<h1>Bloc Savane</h1>
+<header class="brand"><svg viewBox="0 0 64 64" width="46" height="46" aria-hidden="true"><circle cx="42" cy="20" r="15" fill="#f3a712"/><rect x="6" y="6" width="24" height="24" rx="6" fill="#e4572e"/><rect x="6" y="34" width="24" height="24" rx="6" fill="#29a36a"/><rect x="34" y="34" width="24" height="24" rx="6" fill="#2e86de"/></svg><h1>Bloc Savane</h1></header>
 <button id="mus" class="mus" aria-label="Activer ou couper la musique">🔊</button>
 <div class="hud"><div><small>Record</small><b id="bs">0</b></div><div><small>Score</small><b id="sc">0</b></div></div>
+<div class="tools"><button id="bT">🏆 Top</button><button id="bH">🎨 Thèmes</button><button id="bS">📲 Partager</button><button id="bI">💡 Idée</button></div>
+<div id="toast"></div>
 <div id="grid" aria-label="Plateau de jeu"></div>
 <div id="tray"></div>
 <div id="fly"></div>
@@ -65,7 +79,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 <div class="ov" id="ov"><div class="box"><h2 id="ot"></h2><p id="op"></p><div id="ob"></div></div></div>
 
 <script>
-const N=8,COL=['#e4572e','#f3a712','#29a36a','#2e86de','#8e44ad','#17bebb','#e84393'];
+const N=8;let COL=['#e4572e','#f3a712','#29a36a','#2e86de','#8e44ad','#17bebb','#e84393'];
 const SH=[
 [[0,0]],[[0,0],[0,1]],[[0,0],[1,0]],[[0,0],[0,1],[0,2]],[[0,0],[1,0],[2,0]],
 [[0,0],[0,1],[0,2],[0,3]],[[0,0],[1,0],[2,0],[3,0]],[[0,0],[0,1],[1,0],[1,1]],
@@ -74,7 +88,7 @@ const SH=[
 [[0,0],[1,0],[2,0],[2,1],[2,2]],[[0,0],[0,1],[0,2],[1,0],[2,0]],
 [[0,0],[0,1],[0,2],[1,1]],[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]]
 ];
-let g,pcs,score=0,best=0,games=0,drag=null,busy=false;
+let g,pcs,score=0,best=0,games=0,drag=null,busy=false,streak=0,gap=0;
 try{best=+localStorage.getItem('bs_best')||0}catch(e){}
 const $=id=>document.getElementById(id),grid=$('grid'),tray=$('tray'),fly=$('fly');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -151,20 +165,21 @@ async function put(d){
     full.forEach(i=>grid.children[i].classList.add('pop'));
     await wait(210);
     full.forEach(i=>{g[Math.floor(i/N)][i%N]=-1});
-    score+=10*lines*lines;[784,988,1175].slice(0,Math.min(3,lines+1)).forEach((f,k)=>setTimeout(()=>blip(f,0.18),k*90));
+    streak++;gap=0;score+=10*lines*lines*streak;toast(streak>1?'COMBO ×'+streak+' !':(lines>1?'Double !':'Bravo !'));[784,988,1175].slice(0,Math.min(3,lines+1)).forEach((f,k)=>setTimeout(()=>blip(f,0.18),k*90));
   }
+  if(!lines&&++gap>2)streak=0;
   if(pcs.every(p=>!p))deal();
   draw();drawTray();hud();
   if(score>best){best=score;try{localStorage.setItem('bs_best',best)}catch(e){}hud()}
   if(pcs.every(p=>!p||!anyFit(p)))over();
   busy=false;
 }
-function overlay(t,p,btns){
-  $('ot').textContent=t;$('op').textContent=p;const o=$('ob');o.innerHTML='';
+function overlay(t,p,btns,h){
+  $('ot').textContent=t;$('op').textContent=p;if(h)$('op').innerHTML=h;const o=$('ob');o.innerHTML='';
   btns.forEach(([l,fn,alt])=>{const x=document.createElement('button');x.textContent=l;if(alt)x.className='alt';x.onclick=()=>{$('ov').classList.remove('on');fn()};o.appendChild(x)});
   $('ov').classList.add('on');
 }
-function over(){
+function over(){saveScore();
   overlay('Plus de place !','Score : '+score+' · Record : '+best,[
     ['Regarder une pub : continuer',()=>showRewardedAd(()=>{
       for(let r=2;r<6;r++)for(let c=0;c<N;c++)g[r][c]=-1;deal();draw();drawTray()})],
@@ -172,7 +187,7 @@ function over(){
   ]);
 }
 function start(){
-  g=Array.from({length:N},()=>Array(N).fill(-1));score=0;
+  g=Array.from({length:N},()=>Array(N).fill(-1));score=0;streak=0;gap=0;
   if(++games%3===0)showInterstitial();
   deal();draw();drawTray();hud();
 }
@@ -219,6 +234,46 @@ function unlock(){
 ['touchend','pointerup','click','keydown'].forEach(ev=>addEventListener(ev,unlock,{passive:true}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(ac)ac.suspend()}else if(musicOn&&ac)ac.resume()});
 setMus();
+
+/* ---- Thèmes, classement, partage, idées, combos ---- */
+const THEMES={
+ savane:['#e4572e','#f3a712','#29a36a','#2e86de','#8e44ad','#17bebb','#e84393'],
+ ocean:['#ff6b6b','#ffd166','#06d6a0','#4cc9f0','#b388ff','#f78fb3','#ffa94d'],
+ foret:['#ff7f50','#f4d35e','#7bc950','#3fa7d6','#c77dff','#00b4a6','#ef476f'],
+ nuit:['#ff5c8a','#ffd23f','#3bf4a7','#00d4ff','#a06cff','#ff8a3d','#f72585']};
+function setTheme(n){
+  if(!THEMES[n])n='savane';
+  document.documentElement.dataset.t=n;COL=THEMES[n];
+  try{localStorage.setItem('bs_theme',n)}catch(e){}
+  if(g){draw();drawTray()}
+}
+const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function top5(){try{return JSON.parse(localStorage.getItem('bs_top')||'[]')}catch(e){return[]}}
+function saveScore(){
+  if(score<=0)return;
+  let n='';try{n=localStorage.getItem('bs_name')||''}catch(e){}
+  if(!n){n=(prompt('Votre prénom pour le classement ?')||'Joueur').slice(0,14);try{localStorage.setItem('bs_name',n)}catch(e){}}
+  const t=top5();t.push({n:n,s:score});t.sort((a,b)=>b.s-a.s);
+  try{localStorage.setItem('bs_top',JSON.stringify(t.slice(0,5)))}catch(e){}
+}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),1100)}
+$('bT').onclick=()=>{
+  const t=top5(),m=['🥇','🥈','🥉','4.','5.'];
+  const h=t.length?'<ol style="list-style:none;padding:0;margin:0;text-align:left;font-size:18px">'+t.map((x,i)=>'<li>'+m[i]+' <b>'+esc(x.n)+'</b> — '+x.s+'</li>').join('')+'</ol>':'Aucun score pour l’instant. Jouez une partie !';
+  overlay('🏆 Mes meilleurs scores','',[['Fermer',()=>{}]],h);
+};
+$('bH').onclick=()=>overlay('🎨 Thèmes','Choisissez vos couleurs',[
+  ['🌅 Savane',()=>setTheme('savane')],['🌊 Océan',()=>setTheme('ocean')],
+  ['🌴 Forêt',()=>setTheme('foret')],['🌙 Nuit',()=>setTheme('nuit')]]);
+$('bS').onclick=()=>{
+  const t='Je joue à Bloc Savane 🧱 Mon record : '+best+' points. Essaie de me battre ! '+location.origin;
+  window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
+};
+$('bI').onclick=()=>{
+  location.href='mailto:Estebankakoudenis@gmail.com?subject='+encodeURIComponent('Idée pour Bloc Savane')+'&body='+encodeURIComponent('Ma suggestion de forme de bloc, de combo ou d’amélioration :\n\n');
+};
+let sv='savane';try{sv=localStorage.getItem('bs_theme')||'savane'}catch(e){}
+setTheme(sv);
 
 start();
 if("serviceWorker" in navigator){addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
