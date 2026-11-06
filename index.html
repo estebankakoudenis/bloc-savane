@@ -157,7 +157,7 @@ addEventListener('pointercancel',()=>{drag=null;fly.style.display='none';draw()}
 async function put(d){
   busy=true;
   d.p.s.forEach(([a,b])=>{g[d.r+a][d.c+b]=d.p.c});
-  score+=d.p.s.length;pcs[d.i]=null;draw();blip(520,0.1);
+  score+=d.p.s.length;pcs[d.i]=null;draw();blip(520,0.1);buzz(25);
   const full=new Set();let lines=0;
   for(let r=0;r<N;r++)if(g[r].every(v=>v>=0)){lines++;for(let c=0;c<N;c++)full.add(r*N+c)}
   for(let c=0;c<N;c++)if(g.every(row=>row[c]>=0)){lines++;for(let r=0;r<N;r++)full.add(r*N+c)}
@@ -165,7 +165,7 @@ async function put(d){
     full.forEach(i=>grid.children[i].classList.add('pop'));
     await wait(210);
     full.forEach(i=>{g[Math.floor(i/N)][i%N]=-1});
-    streak++;gap=0;score+=10*lines*lines*streak;toast(streak>1?'COMBO ×'+streak+' !':(lines>1?'Double !':'Bravo !'));[784,988,1175].slice(0,Math.min(3,lines+1)).forEach((f,k)=>setTimeout(()=>blip(f,0.18),k*90));
+    streak++;gap=0;score+=10*lines*lines*streak;toast(streak>1?'COMBO ×'+streak+' !':(lines>1?'Double !':'Bravo !'));buzz(lines>1?[40,30,80]:[40,30,40]);[784,988,1175].slice(0,Math.min(3,lines+1)).forEach((f,k)=>setTimeout(()=>blip(f,0.18),k*90));
   }
   if(!lines&&++gap>2)streak=0;
   if(pcs.every(p=>!p))deal();
@@ -179,7 +179,7 @@ function overlay(t,p,btns,h){
   btns.forEach(([l,fn,alt])=>{const x=document.createElement('button');x.textContent=l;if(alt)x.className='alt';x.onclick=()=>{$('ov').classList.remove('on');fn()};o.appendChild(x)});
   $('ov').classList.add('on');
 }
-function over(){saveScore();
+function over(){saveScore();buzz(200);
   overlay('Plus de place !','Score : '+score+' · Record : '+best,[
     ['Regarder une pub : continuer',()=>showRewardedAd(()=>{
       for(let r=2;r<6;r++)for(let c=0;c<N;c++)g[r][c]=-1;deal();draw();drawTray()})],
@@ -211,6 +211,8 @@ function tick(){
   if(i%8===4)tone(mf(BAS[bar]+12),t,0.35,'triangle',0.25);
   mStep++;
 }
+const hl=document.createElement('label');hl.style.cssText='position:fixed;left:-99px;top:0;opacity:0;pointer-events:none';hl.innerHTML='<input type="checkbox" switch>';document.body.appendChild(hl);
+function buzz(p){try{if(navigator.vibrate){navigator.vibrate(p);return}hl.click()}catch(e){}}
 function blip(f,d){if(ac&&musicOn)tone(f,ac.currentTime+0.01,d||0.12,'square',0.15)}
 function setMus(){$('mus').textContent=musicOn?'🔊':'🔇'}
 function startMusic(){
